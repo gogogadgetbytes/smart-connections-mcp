@@ -149,7 +149,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security-focused PRs welcome.
 
 ## Security
 
-To report security vulnerabilities, please email security@gogogadgetbytes. Do not open public issues for security concerns.
+To report security vulnerabilities, please email gogogadgetcode@proton.me. Do not open public issues for security concerns.
 
 ## License
 

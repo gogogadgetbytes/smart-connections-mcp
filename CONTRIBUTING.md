@@ -39,7 +39,7 @@ VAULT_PATH=/path/to/vault node dist/index.js
 
 **Do not open public issues for security vulnerabilities.**
 
-Email security@gogogadgetbytes with:
+Email gogogadgetcode@proton.me with:
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
