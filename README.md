@@ -1,24 +1,31 @@
 # Smart Connections MCP Server
 
-Read-only semantic search for your Obsidian vault. No write access. No surprises.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](package.json)
 
-A minimal, security-hardened [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes [Smart Connections](https://github.com/brianpetro/obsidian-smart-connections) embeddings to Claude Code and other MCP clients.
+A security-first MCP server for Smart Connections. Read-only. Path-validated. Auditable.
+
+Exposes [Smart Connections](https://github.com/brianpetro/obsidian-smart-connections) embeddings to Claude Code and other [MCP](https://modelcontextprotocol.io/) clients for semantic search of your Obsidian vault.
 
 ## Why This Exists
 
-Existing Smart Connections MCP servers have security issues:
-- Path traversal vulnerabilities
-- Unnecessary write access
-- Heavy dependencies (PyTorch for simple queries)
+We needed semantic search of our Obsidian vault from Claude Code. Existing options have problems:
 
-This implementation is **~200 lines of auditable code** with a single dependency.
+- **No path validation** - User input passed directly to file operations
+- **Write access** - Some expose mutation tools we don't need
+- **Heavy dependencies** - PyTorch/transformers for what's essentially vector math
+
+This implementation:
+- **Single dependency** - just the MCP SDK
+- **Fail-closed security** - documented threat model, path validation with realpath, symlink detection
+- **Auditable** - small TypeScript codebase you can actually read
 
 ## Features
 
 - **Semantic search** using pre-computed Smart Connections embeddings
 - **Read-only** - no write operations, no shell execution
-- **Secure** - strict path validation, documented threat model
-- **Minimal** - just the MCP SDK, no ML libraries
+- **Secure** - strict path validation, bounded responses
+- **Minimal** - no ML libraries, no PyTorch
 - **Offline** - works without Obsidian running
 
 ## Security Model
@@ -28,8 +35,9 @@ This implementation is **~200 lines of auditable code** with a single dependency
 | Path confinement | All file access validated against vault root |
 | No traversal | `../` and symlink attacks blocked |
 | Read-only | No write operations exposed |
-| Bounded responses | Capped results, content length, total size |
+| Bounded responses | Capped results (50), content length (10KB) |
 | Fail closed | Errors deny access, never bypass |
+| Audit logging | Security events logged with context |
 
 See [DESIGN.md](docs/DESIGN.md) for the full threat model.
 
@@ -52,7 +60,15 @@ npm run build
 
 ### Configure Claude Code
 
-Add to your Claude Code MCP config (`~/.claude.json` or project settings):
+Add to your Claude Code config:
+
+```bash
+claude mcp add smart-connections \
+  -e VAULT_PATH="/path/to/your/obsidian/vault" \
+  -- node /path/to/smart-connections-mcp/dist/index.js
+```
+
+Or manually add to `~/.claude.json`:
 
 ```json
 {
@@ -68,13 +84,13 @@ Add to your Claude Code MCP config (`~/.claude.json` or project settings):
 }
 ```
 
+Restart Claude Code to load the server.
+
 ## Usage
 
 Once configured, Claude Code can use these tools:
 
 ### Search Similar Notes
-
-Find notes semantically similar to an existing note:
 
 ```
 "Find notes similar to Topics/Claude_Code.md"
@@ -83,16 +99,12 @@ Find notes semantically similar to an existing note:
 
 ### Get Note Content
 
-Retrieve a specific note's content:
-
 ```
 "Show me the content of Topics/Obsidian.md"
 → Uses get_note tool
 ```
 
 ### List Indexed Notes
-
-See all notes with embeddings:
 
 ```
 "What notes are indexed in my vault?"
@@ -103,9 +115,9 @@ See all notes with embeddings:
 
 | Tool | Description |
 |------|-------------|
-| `search_similar` | Find notes similar to a given note |
+| `search_similar` | Find notes semantically similar to a given note |
 | `search_by_embedding` | Search using a raw embedding vector |
-| `get_note` | Get content of a specific note |
+| `get_note` | Get content of a specific note (path validated) |
 | `get_model_info` | Get embedding model configuration |
 | `list_indexed` | List all indexed notes |
 
@@ -131,9 +143,17 @@ npm run build
 npx @modelcontextprotocol/inspector node dist/index.js
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security-focused PRs welcome.
+
+## Security
+
+To report security vulnerabilities, please email security@gogogadgetbytes. Do not open public issues for security concerns.
+
 ## License
 
-MIT
+MIT - see [LICENSE](LICENSE)
 
 ## Credits
 
