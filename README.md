@@ -16,16 +16,17 @@ We needed semantic search of our Obsidian vault from Claude Code. Existing optio
 - **Heavy dependencies** - PyTorch/transformers for what's essentially vector math
 
 This implementation:
-- **Single dependency** - just the MCP SDK
-- **Fail-closed security** - documented threat model, path validation with realpath, symlink detection
+- **Minimal dependencies** - MCP SDK + Transformers.js (for text search)
+- **Fail-closed security** - path validation with realpath, symlink detection
 - **Auditable** - small TypeScript codebase you can actually read
 
 ## Features
 
-- **Semantic search** using pre-computed Smart Connections embeddings
+- **Text search** - query with plain text, not just note paths
+- **Semantic search** using Smart Connections embeddings
+- **Local inference** - uses Transformers.js (same model as Smart Connections)
 - **Read-only** - no write operations, no shell execution
 - **Secure** - strict path validation, bounded responses
-- **Minimal** - no ML libraries, no PyTorch
 - **Offline** - works without Obsidian running
 
 ## Security Model
@@ -38,8 +39,6 @@ This implementation:
 | Bounded responses | Capped results (50), content length (10KB) |
 | Fail closed | Errors deny access, never bypass |
 | Audit logging | Security events logged with context |
-
-See [DESIGN.md](docs/DESIGN.md) for the full threat model.
 
 ## Installation
 
@@ -90,6 +89,13 @@ Restart Claude Code to load the server.
 
 Once configured, Claude Code can use these tools:
 
+### Search by Text
+
+```
+"Search my vault for notes about backup strategies"
+→ Uses search_by_text tool
+```
+
 ### Search Similar Notes
 
 ```
@@ -115,6 +121,7 @@ Once configured, Claude Code can use these tools:
 
 | Tool | Description |
 |------|-------------|
+| `search_by_text` | Search using freeform text (computes embedding locally) |
 | `search_similar` | Find notes semantically similar to a given note |
 | `search_by_embedding` | Search using a raw embedding vector |
 | `get_note` | Get content of a specific note (path validated) |
@@ -130,8 +137,9 @@ Once configured, Claude Code can use these tools:
 ## Limitations
 
 - **Single vault** - Configure one vault per MCP server instance
-- **Pre-computed embeddings only** - Doesn't generate new embeddings
+- **Index from Smart Connections** - Note embeddings come from the plugin; text queries are embedded locally
 - **No write access** - By design; use Obsidian for edits
+- **First run downloads model** - ~50MB model cached in `~/.cache/huggingface/`
 
 ## Development
 
