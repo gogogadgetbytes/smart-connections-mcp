@@ -1,7 +1,8 @@
 /**
  * MCP Tool definitions and handlers.
  *
- * Exposes 5 read-only tools for semantic search:
+ * Exposes 6 read-only tools for semantic search:
+ * - search_by_text: Search using freeform text query (computes embedding locally)
  * - search_similar: Find notes similar to an existing note
  * - search_by_embedding: Search using a raw embedding vector
  * - get_note: Get content of a specific note
@@ -20,6 +21,7 @@ import {
 } from './security.js';
 import { SmartConnectionsData, extractTitle } from './data.js';
 import { findSimilar, findSimilarToNote } from './search.js';
+import { Embedder } from './embeddings.js';
 
 // ============================================================================
 // Tool Schemas (Zod)
@@ -45,11 +47,41 @@ export const ListIndexedSchema = z.object({
   pattern: z.string().optional().describe('Filter by path prefix (e.g., "Topics/")'),
 });
 
+export const SearchByTextSchema = z.object({
+  query: z.string().min(1).max(500).describe('Text to search for (max 500 characters)'),
+  limit: z.number().min(1).max(50).default(10).describe('Maximum results to return (1-50)'),
+  threshold: z.number().min(0).max(1).default(0.3).describe('Minimum similarity score (0-1)'),
+});
+
 // ============================================================================
 // Tool Definitions (for MCP registration)
 // ============================================================================
 
 export const toolDefinitions = [
+  {
+    name: 'search_by_text',
+    description: 'Search for notes using freeform text. Computes embedding locally using the same model as Smart Connections, then finds semantically similar notes.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Text to search for (max 500 characters)',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum results to return (1-50, default: 10)',
+          default: 10,
+        },
+        threshold: {
+          type: 'number',
+          description: 'Minimum similarity score (0-1, default: 0.3)',
+          default: 0.3,
+        },
+      },
+      required: ['query'],
+    },
+  },
   {
     name: 'search_similar',
     description: 'Find notes semantically similar to an existing note in your vault',
@@ -145,6 +177,7 @@ export const toolDefinitions = [
 export interface ToolContext {
   config: Config;
   data: SmartConnectionsData;
+  embedder?: Embedder;
 }
 
 export type ToolResult = {
@@ -217,6 +250,52 @@ export function handleSearchByEmbedding(
   log('INFO', 'search_by_embedding', { resultCount: results.length });
 
   return successResult({
+    results,
+  });
+}
+
+/**
+ * Handle search_by_text tool call.
+ *
+ * Computes embedding for the query text locally, then searches.
+ * Requires embedder to be initialized at startup.
+ */
+export async function handleSearchByText(
+  args: unknown,
+  ctx: ToolContext
+): Promise<ToolResult> {
+  // Check if embedder is available
+  if (!ctx.embedder || !ctx.embedder.isReady()) {
+    return errorResult('Text search not available: embedder not initialized');
+  }
+
+  const parsed = SearchByTextSchema.safeParse(args);
+  if (!parsed.success) {
+    return errorResult(`Invalid arguments: ${parsed.error.message}`);
+  }
+
+  const { query, limit, threshold } = parsed.data;
+
+  // Compute embedding for the query text
+  let embedding: number[];
+  try {
+    embedding = await ctx.embedder.embed(query);
+  } catch (e) {
+    log('ERROR', 'search_by_text_embed_failed', { error: String(e) });
+    // Don't expose internal error details to client
+    return errorResult('Failed to compute embedding');
+  }
+
+  // Search using the computed embedding
+  const results = findSimilar(embedding, ctx.data.entries, {
+    limit: validateLimit(limit, 1, ctx.config.limits.maxResults, 'limit'),
+    threshold,
+  });
+
+  log('INFO', 'search_by_text', { queryLength: query.length, resultCount: results.length });
+
+  return successResult({
+    query,
     results,
   });
 }
@@ -338,12 +417,14 @@ function errorResult(message: string): ToolResult {
 /**
  * Route a tool call to the appropriate handler.
  */
-export function handleToolCall(
+export async function handleToolCall(
   name: string,
   args: unknown,
   ctx: ToolContext
-): ToolResult {
+): Promise<ToolResult> {
   switch (name) {
+    case 'search_by_text':
+      return handleSearchByText(args, ctx);
     case 'search_similar':
       return handleSearchSimilar(args, ctx);
     case 'search_by_embedding':
