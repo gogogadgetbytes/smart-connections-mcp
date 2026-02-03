@@ -1,26 +1,38 @@
 {
-  "name": "smart-connections-mcp",
+  "name": "@gogogadgetbytes/smart-connections-mcp",
   "version": "0.2.0",
+  "mcpName": "io.github.gogogadgetbytes/smart-connections",
   "description": "Secure, minimal MCP server for Smart Connections semantic search",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "smart-connections-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js"
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
+    "mcp-server",
+    "model-context-protocol",
     "obsidian",
     "smart-connections",
     "semantic-search",
-    "model-context-protocol"
+    "embeddings",
+    "ai-agent"
   ],
   "author": "gogogadgetbytes",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gogogadgetbytes/smart-connections-mcp.git"
+  },
   "dependencies": {
     "@huggingface/transformers": "^3.3.0",
     "@modelcontextprotocol/sdk": "^1.12.0"
