@@ -21,3 +21,6 @@ npm-debug.log*
 # Environment (never commit vault paths)
 .env
 .env.local
+
+# MCP Registry tokens
+.mcpregistry_*

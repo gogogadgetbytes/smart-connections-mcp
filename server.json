@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.gogogadgetbytes/smart-connections",
-  "description": "Secure, read-only MCP server for Obsidian Smart Connections. Enables semantic search over your Obsidian vault using the same embeddings as Smart Connections plugin. Path-validated for security.",
+  "description": "MCP server for Obsidian Smart Connections. Semantic search using your vault's embeddings.",
   "repository": {
     "url": "https://github.com/gogogadgetbytes/smart-connections-mcp",
     "source": "github"
